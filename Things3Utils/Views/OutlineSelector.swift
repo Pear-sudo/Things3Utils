@@ -59,10 +59,9 @@ struct OutlineSelector: View {
                         return !(todoDepth <= maxDepth && todoDepth >= 0) || isUpdating
                     }())
                 }
-                HStack {
-                    ScrollView {
-                        AttributedStringViewRepresentable(attributedString: attributedString)
-                    }
+                ScrollView {
+                    AttributedStringViewRepresentable(attributedString: attributedString)
+                        .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
             .onChange(of: todoDepth, initial: true) {
@@ -84,7 +83,6 @@ struct OutlineSelector: View {
             return
         }
         isUpdating = true
-        print("updating")
         Task(priority: .userInitiated) {
             attributedString = getOutlineAttributedString(outline: outline)
             isUpdating = false
@@ -218,8 +216,6 @@ class AttributedStringView: NSView {
         super.draw(dirtyRect)
         guard let context = NSGraphicsContext.current?.cgContext else { return }
         drawText(attributedString: attributedString, in: context, bounds: self.bounds)
-        print("bounds", bounds)
-        print("frame", frame)
     }
 
     private func drawText(attributedString: NSAttributedString, in context: CGContext, bounds: CGRect) {

@@ -43,6 +43,7 @@ struct PDFViewer: View {
                     .onHover(perform: handleOnHover)
                     .gesture(DragGesture().onChanged(handleOnDrag))
                 OutlineSelector(outline: pdfDocument?.outlineRoot)
+                    .padding(.leading, 6)
             }
         }
     }
