@@ -37,7 +37,7 @@ struct PDFViewer: View {
         } else {
             HStack(spacing: 0) {
                 PDFThumbnailWrapper(pdfView: pdfView, thumbnailWidth: thumbnailWidth)
-                    .frame(width: thumbnailWidth)
+                    .frame(width: max(thumbnailWidth, 0))
                 Color(.gray)
                     .frame(width: 2)
                     .onHover(perform: handleOnHover)

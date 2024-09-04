@@ -26,6 +26,7 @@ struct OutlineSelector: View {
     @State private var checklistSpan: Int? = nil
     
     @State private var attributedString: NSAttributedString = .init()
+    @State private var rangeIncluding: String = ""
     
     @State private var isUpdating: Bool = false
     
@@ -59,6 +60,15 @@ struct OutlineSelector: View {
                         return !(todoDepth <= maxDepth && todoDepth >= 0) || isUpdating
                     }())
                 }
+                HStack {
+                    Text("Range (e.g. \"12-13,44-60\")")
+                    TextField("", text: $rangeIncluding)
+                        .textFieldStyle(.roundedBorder)
+                        .labelsHidden()
+                        .onSubmit {
+                            update()
+                        }
+                }
                 ScrollView {
                     AttributedStringViewRepresentable(attributedString: attributedString)
                         .frame(maxWidth: .infinity, alignment: .leading)
@@ -87,6 +97,30 @@ struct OutlineSelector: View {
             attributedString = getOutlineAttributedString(outline: outline)
             isUpdating = false
         }
+    }
+    
+    // MARK: - Helper
+    
+    private typealias Ranges = [ClosedRange<Int>]
+    
+    private func string2Ranges(_ rangeString: String) -> Ranges {
+        let pattern = /(\d+)-(\d+)/
+        let matches = rangeString.matches(of: pattern)
+        var ranges = Ranges()
+        for match in matches {
+            let lhsS = cap(String(match.1)), rhsS = cap(String(match.2))
+            guard let lhs = Int(lhsS), let rhs = Int(rhsS) else {
+                logger.error("Cannot convert string to Int, this is a very unlikely event since the string is extracted from regex")
+                return []
+            }
+            let range = lhs <= rhs ? lhs...rhs : rhs...lhs
+            ranges.append(range)
+        }
+        return ranges
+    }
+    
+    private func cap(_ number: String) -> String {
+        number <= "9223372036854775807" ? number : "9223372036854775807"
     }
     
     // MARK: - Outline extraction
@@ -160,19 +194,30 @@ struct OutlineSelector: View {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4.0
         
-        guard let todoDepth else {
-            return NSAttributedString(string: getOutlineString(outline: outline), attributes: [
-                .foregroundColor: NSColor.textColor,
-                .paragraphStyle: paragraphStyle
-            ])
+        let todoDepth: Int = todoDepth ?? .min
+        var headingDepth: Int = .min
+        var checklistDepth: Int = .min
+        
+        if self.todoDepth != nil {
+            headingDepth = headingSpan == nil ? todoDepth : todoDepth - headingSpan!
+            checklistDepth = checklistSpan == nil ? todoDepth : todoDepth + checklistSpan!
         }
         
-        let headingDepth = headingSpan == nil ? todoDepth : todoDepth - headingSpan!
-        let checklistDepth = checklistSpan == nil ? todoDepth : todoDepth + checklistSpan!
-        
         let attributedString = NSMutableAttributedString()
+        
+        var count = 0
+        let intervalTreeIncluding = rangeIncluding == "" ? nil : IntervalTree(ranges: string2Ranges(rangeIncluding))
 
         recurseOutline(outline: outline) { label, depth in
+            
+            defer {
+                count += 1
+            }
+            
+            guard intervalTreeIncluding == nil || intervalTreeIncluding!.has(count) else {
+                return
+            }
+            
             let indent = String(repeating: " ", count: depth * 4)
             let fullText = indent + label + "\n"
             let attributes: [NSAttributedString.Key: Any] = [
@@ -190,7 +235,16 @@ struct OutlineSelector: View {
                 }(),
                 .paragraphStyle: paragraphStyle
             ]
+            
             let attributedText = NSAttributedString(string: fullText, attributes: attributes)
+            
+            let countStr = String(format: "%4d", count) + "  "
+            let countAttributed = NSAttributedString(string: countStr, attributes: [
+                .font: NSFont.monospacedSystemFont(ofSize: 10, weight: .light),
+                .foregroundColor: NSColor.secondaryLabelColor
+            ])
+
+            attributedString.append(countAttributed)
             attributedString.append(attributedText)
         }
         
@@ -247,7 +301,8 @@ struct AttributedStringViewRepresentable: NSViewRepresentable {
     }
     
     func sizeThatFits(_ proposal: ProposedViewSize, nsView: AttributedStringView, context: Context) -> CGSize? {
-        nsView.sizeThatFits()
+        let size = nsView.sizeThatFits()
+        return .init(width: size.width + 3, height: size.height + 3) // sometimes the text would disappear randomly if the size is too tight or 'just right'
     }
 }
 
