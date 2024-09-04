@@ -42,7 +42,7 @@ struct PDFViewer: View {
                     .frame(width: 2)
                     .onHover(perform: handleOnHover)
                     .gesture(DragGesture().onChanged(handleOnDrag))
-                Spacer()
+                OutlineSelector(outline: pdfDocument?.outlineRoot)
             }
         }
     }
@@ -117,7 +117,7 @@ struct PDFThumbnailWrapper: NSViewRepresentable {
 
 // MARK: - Preview
 
-fileprivate let samplePDF = URL.documentsDirectory.appending(path: "Introduction.to.Algorithms.4th.Leiserson.Stein.Rivest.Cormen.MIT.Press.9780262046305.EBooksWorld.ir.pdf")
+fileprivate let samplePDF = URL.documentsDirectory.appending(path: "algorithm.pdf")
 #Preview {
     PDFViewer(url: samplePDF)
 }
