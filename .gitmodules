@@ -1,0 +1,3 @@
+[submodule "Things3Utils/ThingsJSONCoder"]
+	path = Things3Utils/ThingsJSONCoder
+	url = https://github.com/culturedcode/ThingsJSONCoder.git
