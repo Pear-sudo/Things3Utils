@@ -7,22 +7,35 @@
 
 import SwiftUI
 import Highlightr
+import OSLog
+
+fileprivate let logger = Logger(subsystem: "cyou.b612.things3.views", category: "JsonView")
 
 struct JsonView: View {
     var jsonData: Data
+    @Environment(\.dismiss) private var dismiss
     
     var body: some View {
         VStack(alignment: .center) {
-            Text("Code for nerds")
-                .font(.title)
+            Button("Confirm") {
+                let url = generateJsonURL(jsonData: jsonData)
+                let config = NSWorkspace.OpenConfiguration()
+                config.activates = true
+                NSWorkspace.shared.open(url, configuration: config) { (app, error) in
+                    if let error {
+                        logger.error("\(error.localizedDescription)")
+                    } else {
+                        dismiss()
+                    }
+                }
+            }
             HStack {
                 VStack {
                     Text("JSON")
                         .font(.title2)
-                    ScrollView {
-                        Text(attributedString)
+                    ScrollView([.horizontal, .vertical]) {
+                        AttributedStringViewRepresentable(attributedString: attributedString)
                             .frame(maxWidth: .infinity, alignment: .leading)
-                            .textSelection(.enabled)
                     }
                 }
                 VStack {
@@ -35,19 +48,22 @@ struct JsonView: View {
                 }
             }
         }
+        .padding()
     }
     
-    private var attributedString: AttributedString {
+    private var attributedString: NSAttributedString {
         let highlightr = Highlightr()!
         highlightr.setTheme(to: "xcode")
         let highlightedCode = highlightr.highlight(pretty, as: "json")!
-        return AttributedString(highlightedCode)
+        logger.debug("attributedString computed")
+        return highlightedCode
     }
     
     private var pretty: String {
         do {
             let json = try JSONSerialization.jsonObject(with: jsonData)
             let data = try JSONSerialization.data(withJSONObject: json, options: .prettyPrinted)
+            logger.debug("pretty json computed")
             return String(data: data, encoding: .utf8)!
         } catch {
             

@@ -10,4 +10,5 @@ import Foundation
 @Observable
 class ViewModel {
     var jsonData: Data? = nil
+    var isCalculatingJsonData = false
 }

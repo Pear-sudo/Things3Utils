@@ -15,7 +15,11 @@ struct SubmissionView: View {
                 JsonView(jsonData: jsonData)
             }
         } else {
-            Text("Data unavailable")
+            if viewModel.isCalculatingJsonData {
+                ProgressView()
+            } else {
+                Text("Data unavailable")
+            }
         }
     }
 }

@@ -8,6 +8,7 @@
 import SwiftUI
 import PDFKit
 import OSLog
+import Dispatch
 
 fileprivate let logger = Logger(subsystem: "cyou.b612.things3.views", category: "OutlineSelector")
 
@@ -72,7 +73,13 @@ struct OutlineSelector: View {
                             update()
                         }
                     Button("Submit") {
-                        viewModel.jsonData = getJsonData()
+                        viewModel.isCalculatingJsonData = true
+                        DispatchQueue.global(qos: .userInitiated).async {
+                            viewModel.jsonData = getJsonData()
+                            logger.debug("Json data is set to view model")
+                            viewModel.isCalculatingJsonData = false
+                            logger.debug("isCalculatingJsonData=false is set to view model")
+                        }
                         openWindow(id: WindowID.submission.rawValue)
                     }
                     .disabled(todoDepth == nil)
@@ -274,7 +281,7 @@ struct OutlineSelector: View {
         var headingStack: [String] = .init()
         var todoDepthCache: Int? = nil
         
-        let project = TJSProject(items: [])
+        let project = TJSProject(title: "Imported Project \(Date().formatted(date: .abbreviated, time: .shortened))", items: [])
         
         var count = 0
         let intervalTreeIncluding = rangeIncluding == "" ? nil : IntervalTree(ranges: string2Ranges(rangeIncluding))
@@ -284,6 +291,7 @@ struct OutlineSelector: View {
                 count += 1
             }
             guard intervalTreeIncluding == nil || intervalTreeIncluding!.has(count) else {
+                updateHeadingStack(label: label, depth: depth)
                 return
             }
             
@@ -298,10 +306,21 @@ struct OutlineSelector: View {
         
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = ThingsJSONDateEncodingStrategy()
-        let data = try! encoder.encode(project)
+        let data = try! encoder.encode([project])
+        
+        logger.debug("Calculated json date will return")
         return data
                         
         func handleHeading(label: String, depth: Int) {
+            updateHeadingStack(label: label, depth: depth)
+            
+            let heading = TJSHeading(title: headingStack.joined(separator: " -> "))
+            project.items?.append(.heading(heading))
+            
+            todoDepthCache = nil
+        }
+        
+        func updateHeadingStack(label: String, depth: Int) {
             let depth = depth + 1
             if headingStack.isEmpty {
                 headingStack.append(label)
@@ -317,15 +336,10 @@ struct OutlineSelector: View {
             default:
                 logger.error("Unexpected depth: \(depth) label: \(label) headingStack: \(headingStack)")
             }
-            
-            let heading = TJSHeading(title: headingStack.joined(separator: " -> "))
-            project.items?.append(.heading(heading))
-            
-            todoDepthCache = nil
         }
         
         func handleTodo(label: String, depth: Int) {
-            let todo = TJSTodo(title: label, checklistItems: [])
+            let todo = TJSTodo(title: label)
             project.items?.append(.todo(todo))
             todoDepthCache = depth
         }
@@ -348,6 +362,9 @@ struct OutlineSelector: View {
                 return
             }
             let checklistItem = TJSChecklistItem(title: label)
+            if todo.checklistItems == nil {
+                todo.checklistItems = []
+            }
             todo.checklistItems?.append(checklistItem)
             project.items?.removeLast()
             project.items?.append(.todo(todo))

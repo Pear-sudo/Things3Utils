@@ -11,7 +11,7 @@ import SwiftData
 @main
 struct Things3UtilsApp: App {
     
-    @State private var viewModel: ViewModel = .init()
+    private var viewModel: ViewModel = .init()
     
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
