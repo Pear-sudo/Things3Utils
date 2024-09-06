@@ -84,7 +84,11 @@ struct OutlineSelector: View {
                 update()
             }
         } else {
-            Text("Cannot retrieve PDF outline")
+            HStack {
+                Spacer()
+                Text("Cannot retrieve PDF outline")
+                Spacer()
+            }
         }
     }
     

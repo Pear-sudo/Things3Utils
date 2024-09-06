@@ -14,7 +14,7 @@ struct ContentView: View {
     private let logger = Logger(subsystem: "cyou.b612.things3.views", category: "MainView")
 
     var body: some View {
-        VStack {
+        VStack(alignment: .leading) {
             ImportArea(url: $url)
             if let url {
                 PDFViewer(url: url)
