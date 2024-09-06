@@ -9,6 +9,7 @@ import SwiftUI
 import PDFKit
 import OSLog
 import Dispatch
+import DequeModule
 
 fileprivate let logger = Logger(subsystem: "cyou.b612.things3.views", category: "OutlineSelector")
 
@@ -98,6 +99,7 @@ struct OutlineSelector: View {
             .onChange(of: checklistSpan) {
                 update()
             }
+            .onAppear(perform: handleOnAppear)
         } else {
             HStack {
                 Spacer()
@@ -116,6 +118,12 @@ struct OutlineSelector: View {
             attributedString = getOutlineAttributedString(outline: outline)
             isUpdating = false
         }
+    }
+    
+    private func handleOnAppear() {
+#if DEBUG
+        print(flatten())
+#endif
     }
     
     // MARK: - Helper
@@ -146,25 +154,72 @@ struct OutlineSelector: View {
     
     private func recurseOutline (
         outline: PDFOutline,
-        action: ((String, Int) -> Void)? = nil
+        action: ((String, Int) -> Void)? = nil,
+        postAction: ((String?, Int, Int) -> Void)? = nil
     ) {
         var maxDepth = 0
-        func kernel(outline: PDFOutline, depth: Int) {
+        func kernel(outline: PDFOutline, depth: Int) -> Int {
+            var height = 0
             for i in 0..<outline.numberOfChildren {
                 if let child = outline.child(at: i) {
                     if let label = child.label {
-                        if let action {
-                            action(label, depth)
-                        }
+                        action?(label, depth)
                     }
-                    kernel(outline: child, depth: depth + 1)
+                    let childHeight = kernel(outline: child, depth: depth + 1)
+                    postAction?(child.label, depth, childHeight)
+                    height = max(childHeight, height)
                 }
             }
-            maxDepth = max(depth, maxDepth)
+            return height + 1
         }
-        kernel(outline: outline, depth: 0)
-        maxDepth -= 1 // the outmost node is just a wrapper
+        maxDepth = kernel(outline: outline, depth: 0)
+        maxDepth -= 2 // the outmost node is just a wrapper; we start from 0 (but kernel returns height, which starts from 1)
         self.maxDepth = maxDepth
+    }
+    
+    private func flatten() -> [OutlineInfo] {
+        guard let outline else {
+            return []
+        }
+        
+        typealias Infos =  Deque<Deque<OutlineInfo>>
+        var infos: Infos = [[]]
+        var previousDepth = 0
+        
+        recurseOutline(outline: outline, postAction: { label, depth, height in
+            let info = OutlineInfo(label: label, depth: depth, height: height)
+            switch depth {
+            case previousDepth:
+                var last = infos.popLast()!
+                last.append(info)
+                infos.append(last)
+            case previousDepth - 1:
+                previousDepth = depth
+                let last = infos.popLast()!
+                var secondLast = infos.popLast()!
+                secondLast.append(info)
+                secondLast.append(contentsOf: last)
+                infos.append(secondLast)
+            case (previousDepth + 1)...:
+                infos.append(contentsOf: Infos(repeating: .init(), count: depth - previousDepth - 1))
+                previousDepth = depth
+                infos.append([info])
+            default:
+                logger.error("Unexpected recurse structure")
+            }
+        })
+        
+        return infos.flatMap({$0})
+    }
+    
+    private struct OutlineInfo: CustomStringConvertible {
+        var label: String?
+        var depth: Int
+        var height: Int
+        
+        var description: String {
+            "\n\(label ?? "nil") (depth: \(depth) height \(height))"
+        }
     }
     
     private func printOutline(outline: PDFOutline) {
@@ -486,4 +541,5 @@ fileprivate let samplePDF = URL.documentsDirectory.appending(path: "algorithm.pd
 
 #Preview {
     OutlineSelectorWrapper()
+        .environment(ViewModel())
 }
