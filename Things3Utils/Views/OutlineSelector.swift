@@ -31,6 +31,7 @@ struct OutlineSelector: View {
     @State private var isUpdating: Bool = false
     
     @Environment(\.openWindow) private var openWindow
+    @Environment(ViewModel.self) private var viewModel
     
     private let todoColor: NSColor = .cyan
     private let headingColor: NSColor = .orange
@@ -71,6 +72,7 @@ struct OutlineSelector: View {
                             update()
                         }
                     Button("Submit") {
+                        viewModel.jsonData = getJsonData()
                         openWindow(id: WindowID.submission.rawValue)
                     }
                     .disabled(todoDepth == nil)
@@ -259,6 +261,97 @@ struct OutlineSelector: View {
         }
         
         return attributedString
+    }
+    
+    private func getJsonData() -> Data? {
+        guard let todoDepth, let outline else {
+            return nil
+        }
+        
+        let headingDepth = headingSpan == nil ? todoDepth : todoDepth - headingSpan!
+        let checklistDepth = checklistSpan == nil ? todoDepth : todoDepth + checklistSpan!
+        
+        var headingStack: [String] = .init()
+        var todoDepthCache: Int? = nil
+        
+        let project = TJSProject(items: [])
+        
+        var count = 0
+        let intervalTreeIncluding = rangeIncluding == "" ? nil : IntervalTree(ranges: string2Ranges(rangeIncluding))
+        
+        recurseOutline(outline: outline) { label, depth in
+            defer {
+                count += 1
+            }
+            guard intervalTreeIncluding == nil || intervalTreeIncluding!.has(count) else {
+                return
+            }
+            
+            if depth < todoDepth && depth >= headingDepth {
+                handleHeading(label: label, depth: depth)
+            } else if todoDepth == depth {
+                handleTodo(label: label, depth: depth)
+            } else if depth > todoDepth && depth <= checklistDepth {
+                handleChecklist(label: label, depth: depth)
+            }
+        }
+        
+        let encoder = JSONEncoder()
+        encoder.dateEncodingStrategy = ThingsJSONDateEncodingStrategy()
+        let data = try! encoder.encode(project)
+        return data
+                        
+        func handleHeading(label: String, depth: Int) {
+            let depth = depth + 1
+            if headingStack.isEmpty {
+                headingStack.append(label)
+            }
+            switch headingStack.count {
+            case depth:
+                headingStack.removeLast()
+                headingStack.append(label)
+            case depth + 1:
+                headingStack.removeLast()
+            case depth - 1:
+                headingStack.append(label)
+            default:
+                logger.error("Unexpected depth: \(depth) label: \(label) headingStack: \(headingStack)")
+            }
+            
+            let heading = TJSHeading(title: headingStack.joined(separator: " -> "))
+            project.items?.append(.heading(heading))
+            
+            todoDepthCache = nil
+        }
+        
+        func handleTodo(label: String, depth: Int) {
+            let todo = TJSTodo(title: label, checklistItems: [])
+            project.items?.append(.todo(todo))
+            todoDepthCache = depth
+        }
+        
+        func handleChecklist(label: String, depth: Int) {
+            guard let todoDepthCache else {
+                logger.error("Estranged checklist at depth \(depth) with label \(label)")
+                return
+            }
+            guard todoDepthCache == depth - 1 else {
+                logger.error("Checklist depth mismatch: checklist depth: \(depth) todoDepthCache: \(todoDepthCache)")
+                return
+            }
+            guard let lastProjectItem = project.items?.last else {
+                logger.error("Project items list is empty")
+                return
+            }
+            guard case .todo(let todo) = lastProjectItem else {
+                logger.error("Last project item is not a todo")
+                return
+            }
+            let checklistItem = TJSChecklistItem(title: label)
+            todo.checklistItems?.append(checklistItem)
+            project.items?.removeLast()
+            project.items?.append(.todo(todo))
+        }
     }
 }
 
