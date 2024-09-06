@@ -270,12 +270,12 @@ struct OutlineSelector: View {
         return attributedString
     }
     
-    private func getJsonData() -> Data? {
+    private func getJsonData() -> [Data] {
         guard let todoDepth, let outline else {
-            return nil
+            return []
         }
         
-        let headingDepth = headingSpan == nil ? todoDepth : todoDepth - headingSpan!
+        let headingDepth = headingSpan == nil ? todoDepth : max(todoDepth - headingSpan!, 0)
         let checklistDepth = checklistSpan == nil ? todoDepth : todoDepth + checklistSpan!
         
         var headingStack: [String] = .init()
@@ -290,8 +290,9 @@ struct OutlineSelector: View {
             defer {
                 count += 1
             }
+            
+            updateHeadingStack(label: label, depth: depth)
             guard intervalTreeIncluding == nil || intervalTreeIncluding!.has(count) else {
-                updateHeadingStack(label: label, depth: depth)
                 return
             }
             
@@ -306,14 +307,20 @@ struct OutlineSelector: View {
         
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = ThingsJSONDateEncodingStrategy()
-        let data = try! encoder.encode([project])
+        var data: [Data] = []
+//        for start in stride(from: 0, to: project.items!.count, by: 250) {
+//            let end = min(start + 250, project.items!.count)
+//            let batch = Array(project.items![start..<end])
+//            let project = TJSProject(title: "Imported Project \(Date().formatted(date: .abbreviated, time: .shortened))", items: batch)
+//            data.append(try! encoder.encode([project]))
+//        }
+        data.append(try! encoder.encode([project])) // seems that things 3 isn't enforcing the 250 items per 10 seconds rule; then just let user confirm
         
         logger.debug("Calculated json date will return")
         return data
                         
         func handleHeading(label: String, depth: Int) {
-            updateHeadingStack(label: label, depth: depth)
-            
+            let headingStack = headingStack[headingDepth...depth]
             let heading = TJSHeading(title: headingStack.joined(separator: " -> "))
             project.items?.append(.heading(heading))
             
@@ -329,8 +336,9 @@ struct OutlineSelector: View {
             case depth:
                 headingStack.removeLast()
                 headingStack.append(label)
-            case depth + 1:
-                headingStack.removeLast()
+            case (depth + 1)...:
+                headingStack.removeLast(headingStack.count - depth + 1)
+                headingStack.append(label)
             case depth - 1:
                 headingStack.append(label)
             default:

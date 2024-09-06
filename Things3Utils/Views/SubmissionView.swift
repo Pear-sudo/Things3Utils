@@ -10,9 +10,9 @@ import SwiftUI
 struct SubmissionView: View {
     @Environment(ViewModel.self) private var viewModel
     var body: some View {
-        if let jsonData = viewModel.jsonData {
+        if !viewModel.jsonData.isEmpty {
             VStack {
-                JsonView(jsonData: jsonData)
+                JsonView(jsonData: viewModel.jsonData)
             }
         } else {
             if viewModel.isCalculatingJsonData {

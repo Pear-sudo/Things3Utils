@@ -3,4 +3,23 @@
    uuid = "11E9462D-78E1-4002-A483-F16C83012CB0"
    type = "1"
    version = "2.0">
+   <Breakpoints>
+      <BreakpointProxy
+         BreakpointExtensionID = "Xcode.Breakpoint.FileBreakpoint">
+         <BreakpointContent
+            uuid = "6EFD4A5A-CA62-4D56-84DF-88FC689269EE"
+            shouldBeEnabled = "Yes"
+            condition = "label == &quot;Part II Sorting and Order Statistics&quot;"
+            ignoreCount = "0"
+            continueAfterRunningActions = "No"
+            filePath = "Things3Utils/Views/OutlineSelector.swift"
+            startingColumnNumber = "9223372036854775807"
+            endingColumnNumber = "9223372036854775807"
+            startingLineNumber = "331"
+            endingLineNumber = "331"
+            landmarkName = "updateHeadingStack(label:depth:)"
+            landmarkType = "9">
+         </BreakpointContent>
+      </BreakpointProxy>
+   </Breakpoints>
 </Bucket>
