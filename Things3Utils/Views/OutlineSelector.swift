@@ -30,6 +30,8 @@ struct OutlineSelector: View {
     
     @State private var isUpdating: Bool = false
     
+    @Environment(\.openWindow) private var openWindow
+    
     private let todoColor: NSColor = .cyan
     private let headingColor: NSColor = .orange
     private let checklistColor: NSColor = .magenta
@@ -68,6 +70,10 @@ struct OutlineSelector: View {
                         .onSubmit {
                             update()
                         }
+                    Button("Submit") {
+                        openWindow(id: WindowID.submission.rawValue)
+                    }
+                    .disabled(todoDepth == nil)
                 }
                 ScrollView {
                     AttributedStringViewRepresentable(attributedString: attributedString)

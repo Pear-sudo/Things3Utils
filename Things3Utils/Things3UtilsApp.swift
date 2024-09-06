@@ -10,6 +10,9 @@ import SwiftData
 
 @main
 struct Things3UtilsApp: App {
+    
+    @State private var viewModel: ViewModel = .init()
+    
     var sharedModelContainer: ModelContainer = {
         let schema = Schema([
         ])
@@ -27,5 +30,15 @@ struct Things3UtilsApp: App {
             ContentView()
         }
         .modelContainer(sharedModelContainer)
+        .environment(viewModel)
+        
+        Window("Submission", id: WindowID.submission.rawValue) {
+            SubmissionView()
+        }
+        .environment(viewModel)
     }
+}
+
+enum WindowID: String, RawRepresentable {
+    case submission
 }
