@@ -203,6 +203,30 @@ struct OutlineSelector: View {
         self.maxDepth = maxDepth
     }
     
+    private func recurseCleanedOutline (
+        outline: PDFOutline,
+        action: ((String, Int) -> Void)? = nil,
+        postAction: ((String?, Int, Int) -> Void)? = nil
+    ) {
+        recurseOutline(
+            outline: outline,
+            action: {label, depth in action?(cleanupLabel(label), depth)},
+            postAction: {label, depth, height in postAction?(cleanupLabel(label), depth, height)}
+        )
+    }
+    
+    private func cleanupLabel(_ label: String?) -> String? {
+        guard let label else {
+            return nil
+        }
+        return cleanupLabel(label)
+    }
+    
+    private func cleanupLabel(_ label: String) -> String {
+        label
+            .replacingOccurrences(of: "\r", with: "")
+    }
+    
     private func flatten() -> [OutlineInfo] {
         guard let outline else {
             return []
@@ -212,7 +236,7 @@ struct OutlineSelector: View {
         var infos: Infos = [[]]
         var previousDepth = 0
         
-        recurseOutline(outline: outline, postAction: { label, depth, height in
+        recurseCleanedOutline(outline: outline, postAction: { label, depth, height in
             let info = OutlineInfo(label: label, depth: depth, height: height)
             switch depth {
             case previousDepth:
@@ -249,14 +273,14 @@ struct OutlineSelector: View {
     }
     
     private func printOutline(outline: PDFOutline) {
-        recurseOutline(outline: outline, action: { label, depth in
+        recurseCleanedOutline(outline: outline, action: { label, depth in
             print(String(repeating: " ", count: depth) + label)
         })
     }
     
     private func getOutlineString(outline: PDFOutline) -> String {
         var s = ""
-        recurseOutline(outline: outline) { label, depth in
+        recurseCleanedOutline(outline: outline) { label, depth in
             s = s + String(repeating: " ", count: depth * 4) + label +  "\n"
         }
         return s
@@ -267,7 +291,7 @@ struct OutlineSelector: View {
         
         let todoRange = todoRange ?? Int.min...Int.min
 
-        recurseOutline(outline: outline) { label, depth in
+        recurseCleanedOutline(outline: outline) { label, depth in
             let indent = String(repeating: " ", count: depth * 4)
             let fullText = indent + label + "\n"
             var attributedText = AttributedString(fullText)
@@ -310,7 +334,7 @@ struct OutlineSelector: View {
         var count = 0
         let intervalTreeIncluding = rangeIncluding == "" ? nil : IntervalTree(ranges: string2Ranges(rangeIncluding))
 
-        recurseOutline(outline: outline) { label, depth in
+        recurseCleanedOutline(outline: outline) { label, depth in
             
             defer {
                 count += 1
@@ -369,7 +393,7 @@ struct OutlineSelector: View {
         var count = 0
         let intervalTreeIncluding = rangeIncluding == "" ? nil : IntervalTree(ranges: string2Ranges(rangeIncluding))
         
-        recurseOutline(outline: outline) { label, depth in
+        recurseCleanedOutline(outline: outline) { label, depth in
             defer {
                 count += 1
             }
