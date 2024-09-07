@@ -23,7 +23,8 @@ struct OutlineSelector: View {
     
     @State private var maxDepth: Int = 0
     
-    @State private var todoDepth: Int? = nil
+    @State private var todoRange: ClosedRange<Int>? = nil
+    @State private var todoRangeText: String = ""
     @State private var headingSpan: Int? = nil
     @State private var checklistSpan: Int? = nil
     
@@ -43,9 +44,12 @@ struct OutlineSelector: View {
         if outline != nil {
             VStack(alignment: .leading) {
                 HStack {
-                    NumberField(number: $todoDepth) {
+                    VStack {
                         Text("Todo depth (0-\(maxDepth))")
                             .foregroundStyle(Color(nsColor: todoColor))
+                        TextField("", text: $todoRangeText)
+                            .labelsHidden()
+                            .textFieldStyle(.roundedBorder)
                     }
                         .disabled(isUpdating)
                     Group {
@@ -58,12 +62,7 @@ struct OutlineSelector: View {
                                 .foregroundStyle(Color(nsColor: checklistColor))
                         }
                     }
-                    .disabled({
-                        guard let todoDepth else {
-                            return true
-                        }
-                        return !(todoDepth <= maxDepth && todoDepth >= 0) || isUpdating
-                    }())
+                    .disabled(shouldSpanFieldBeDisabled())
                 }
                 HStack {
                     Text("Range (e.g. \"12-13,44-60\")")
@@ -83,15 +82,15 @@ struct OutlineSelector: View {
                         }
                         openWindow(id: WindowID.submission.rawValue)
                     }
-                    .disabled(todoDepth == nil)
+                    .disabled(todoRange == nil)
                 }
                 ScrollView {
                     AttributedStringViewRepresentable(attributedString: attributedString)
                         .frame(maxWidth: .infinity, alignment: .leading)
                 }
             }
-            .onChange(of: todoDepth, initial: true) {
-                update()
+            .onChange(of: todoRangeText, initial: true) {
+                handleTodoRangeTextChange()
             }
             .onChange(of: headingSpan) {
                 update()
@@ -121,9 +120,36 @@ struct OutlineSelector: View {
     }
     
     private func handleOnAppear() {
+        update()
 #if DEBUG
         print(flatten())
 #endif
+    }
+    
+    // MARK: - Validity check
+    
+    private func handleTodoRangeTextChange() {
+        var ranges = string2Ranges(todoRangeText)
+        if ranges.isEmpty {
+            if let singleNumber = Int(todoRangeText) {
+                ranges.append(singleNumber...singleNumber)
+            } else {
+                return
+            }
+        }
+        let range = ranges.first!
+        if isTodoRangeValid(range: range) {
+            todoRange = range
+            update()
+        }
+    }
+    
+    private func shouldSpanFieldBeDisabled() -> Bool {
+        return todoRange == nil || isUpdating
+    }
+    
+    private func isTodoRangeValid(range: ClosedRange<Int>) -> Bool {
+        return range.lowerBound >= 0 && range.upperBound <= maxDepth
     }
     
     // MARK: - Helper
@@ -238,6 +264,8 @@ struct OutlineSelector: View {
     
     private func getOutlineAttributedString(outline: PDFOutline) -> AttributedString {
         var attributedString = AttributedString()
+        
+        let todoRange = todoRange ?? Int.min...Int.min
 
         recurseOutline(outline: outline) { label, depth in
             let indent = String(repeating: " ", count: depth * 4)
@@ -248,7 +276,7 @@ struct OutlineSelector: View {
                 switch depth {
                 case headingSpan:
                     return headingColor
-                case todoDepth:
+                case todoRange:
                     return todoColor
                 case checklistSpan:
                     return checklistColor
@@ -268,13 +296,13 @@ struct OutlineSelector: View {
         let paragraphStyle = NSMutableParagraphStyle()
         paragraphStyle.lineSpacing = 4.0
         
-        let todoDepth: Int = todoDepth ?? .min
+        let todoRange: ClosedRange<Int> = todoRange ?? Int.min...Int.min
         var headingDepth: Int = .min
         var checklistDepth: Int = .min
         
-        if self.todoDepth != nil {
-            headingDepth = headingSpan == nil ? todoDepth : todoDepth - headingSpan!
-            checklistDepth = checklistSpan == nil ? todoDepth : todoDepth + checklistSpan!
+        if self.todoRange != nil {
+            headingDepth = headingSpan == nil ? todoRange.lowerBound : todoRange.lowerBound - headingSpan!
+            checklistDepth = checklistSpan == nil ? todoRange.upperBound : todoRange.upperBound + checklistSpan!
         }
         
         let attributedString = NSMutableAttributedString()
@@ -297,11 +325,11 @@ struct OutlineSelector: View {
             let attributes: [NSAttributedString.Key: Any] = [
                 .foregroundColor: {
                     switch depth {
-                    case todoDepth:
+                    case todoRange:
                         todoColor
-                    case headingDepth...todoDepth:
+                    case headingDepth...todoRange.lowerBound:
                         headingColor
-                    case todoDepth...checklistDepth:
+                    case todoRange.upperBound...checklistDepth:
                         checklistColor
                     default:
                         NSColor.textColor
@@ -326,12 +354,12 @@ struct OutlineSelector: View {
     }
     
     private func getJsonData() -> [Data] {
-        guard let todoDepth, let outline else {
+        guard let todoRange, let outline else {
             return []
         }
         
-        let headingDepth = headingSpan == nil ? todoDepth : max(todoDepth - headingSpan!, 0)
-        let checklistDepth = checklistSpan == nil ? todoDepth : todoDepth + checklistSpan!
+        let headingDepth = headingSpan == nil ? todoRange.lowerBound : max(todoRange.lowerBound - headingSpan!, 0)
+        let checklistDepth = checklistSpan == nil ? todoRange.upperBound : todoRange.upperBound + checklistSpan!
         
         var headingStack: [String] = .init()
         var todoDepthCache: Int? = nil
@@ -351,11 +379,11 @@ struct OutlineSelector: View {
                 return
             }
             
-            if depth < todoDepth && depth >= headingDepth {
+            if (headingDepth..<todoRange.lowerBound).contains(depth) {
                 handleHeading(label: label, depth: depth)
-            } else if todoDepth == depth {
+            } else if todoRange.contains(depth) {
                 handleTodo(label: label, depth: depth)
-            } else if depth > todoDepth && depth <= checklistDepth {
+            } else if depth > todoRange.lowerBound && depth <= checklistDepth {
                 handleChecklist(label: label, depth: depth)
             }
         }
