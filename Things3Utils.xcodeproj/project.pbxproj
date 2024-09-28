@@ -9,6 +9,7 @@
 /* Begin PBXBuildFile section */
 		0000737E2C89CC61005D6420 /* Highlightr in Frameworks */ = {isa = PBXBuildFile; productRef = 0000737D2C89CC61005D6420 /* Highlightr */; };
 		000073BB2C8B253C005D6420 /* DequeModule in Frameworks */ = {isa = PBXBuildFile; productRef = 000073BA2C8B253C005D6420 /* DequeModule */; };
+		0074DAD32CA7F3F700AA5342 /* README.md in Resources */ = {isa = PBXBuildFile; fileRef = 0074DAD22CA7F3EF00AA5342 /* README.md */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -32,6 +33,7 @@
 		0021C6CE2C86CCB80064D9FF /* Things3Utils.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Things3Utils.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		0021C6E12C86CCB90064D9FF /* Things3UtilsTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Things3UtilsTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		0021C6EB2C86CCB90064D9FF /* Things3UtilsUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = Things3UtilsUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		0074DAD22CA7F3EF00AA5342 /* README.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = README.md; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -61,6 +63,11 @@
 		0021C6EE2C86CCB90064D9FF /* Things3UtilsUITests */ = {
 			isa = PBXFileSystemSynchronizedRootGroup;
 			path = Things3UtilsUITests;
+			sourceTree = "<group>";
+		};
+		0074DAD42CA7F6AD00AA5342 /* Screenshots */ = {
+			isa = PBXFileSystemSynchronizedRootGroup;
+			path = Screenshots;
 			sourceTree = "<group>";
 		};
 /* End PBXFileSystemSynchronizedRootGroup section */
@@ -102,6 +109,8 @@
 		0021C6C52C86CCB80064D9FF = {
 			isa = PBXGroup;
 			children = (
+				0074DAD42CA7F6AD00AA5342 /* Screenshots */,
+				0074DAD22CA7F3EF00AA5342 /* README.md */,
 				0021C6D02C86CCB80064D9FF /* Things3Utils */,
 				0021C6E42C86CCB90064D9FF /* Things3UtilsTests */,
 				0021C6EE2C86CCB90064D9FF /* Things3UtilsUITests */,
@@ -137,6 +146,7 @@
 			);
 			fileSystemSynchronizedGroups = (
 				0021C6D02C86CCB80064D9FF /* Things3Utils */,
+				0074DAD42CA7F6AD00AA5342 /* Screenshots */,
 			);
 			name = Things3Utils;
 			packageProductDependencies = (
@@ -246,6 +256,7 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				0074DAD32CA7F3F700AA5342 /* README.md in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
